@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -35,25 +35,41 @@ namespace cutlass {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#if defined(__NVCC__) || (defined(__clang__) && defined(__CUDA__))
+#define CUTLASS_HOST_DEVICE __forceinline__ __device__ __host__
+#define CUTLASS_DEVICE __forceinline__ __device__
+#elif defined(__CUDACC_RTC__)
+#define CUTLASS_HOST_DEVICE __forceinline__ __device__
+#define CUTLASS_DEVICE __forceinline__ __device__
+#else
+#define CUTLASS_HOST_DEVICE inline
+#endif
+
 /// Status code returned by CUTLASS operations
 enum class Status {
   kSuccess,                    ///< Operation was successful.
   kErrorMisalignedOperand,     ///< operands fail alignment requirements.
+  kErrorInvalidDataType,       ///< DataType fails requirement.
   kErrorInvalidLayout,         ///< Layout fails alignment requirement.
   kErrorInvalidProblem,        ///< Specified problem size is not supported by operator.
   kErrorNotSupported,          ///< Operation is not supported on current device.
   kErrorWorkspaceNull,         ///< The given workspace is null when it is required to be non-null.
   kErrorInternal,              ///< An error within CUTLASS occurred.
+  kErrorArchMismatch,          ///< CUTLASS runs on a device that it was not compiled for.
+  kErrorInsufficientDriver,    ///< CUTLASS runs with a driver that is too old.
   kInvalid                     ///< Status is unspecified.
 };
 
 /// Convert cutlass status to status strings
-static inline char const* cutlassGetStatusString(cutlass::Status status) {
+CUTLASS_HOST_DEVICE
+static char const* cutlassGetStatusString(cutlass::Status status) {
   switch (status) {
     case cutlass::Status::kSuccess:
       return "Success";
     case cutlass::Status::kErrorMisalignedOperand:
       return "Error Misaligned Operand";
+    case cutlass::Status::kErrorInvalidDataType:
+      return "Error Invalid Data Type";
     case cutlass::Status::kErrorInvalidLayout:
       return "Error Invalid Layout";
     case cutlass::Status::kErrorInvalidProblem:
@@ -64,6 +80,10 @@ static inline char const* cutlassGetStatusString(cutlass::Status status) {
       return "Error Workspace Null";
     case cutlass::Status::kErrorInternal:
       return "Error Internal";
+    case cutlass::Status::kErrorInsufficientDriver:
+      return "Error Insufficient Driver";
+    case cutlass::Status::kErrorArchMismatch:
+      return "Erroor Architecture Mismatch";
     case cutlass::Status::kInvalid: break;
   }
 
@@ -78,16 +98,6 @@ static inline char const* cutlassGetStatusString(cutlass::Status status) {
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-#if defined(__NVCC__) || (defined(__clang__) && defined(__CUDA__))
-#define CUTLASS_HOST_DEVICE __forceinline__ __device__ __host__
-#define CUTLASS_DEVICE __forceinline__ __device__
-#elif defined(__CUDACC_RTC__)
-#define CUTLASS_HOST_DEVICE __forceinline__ __device__
-#define CUTLASS_DEVICE __forceinline__ __device__
-#else
-#define CUTLASS_HOST_DEVICE inline
-#endif
 
 #define CUTLASS_ASSERT(x) assert(x)
 
@@ -115,6 +125,12 @@ static inline char const* cutlassGetStatusString(cutlass::Status status) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+template <typename T>
+struct Debug {
+  typename T::X x;
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static const int NUM_THREADS_PER_WARP = 32;
 static const int NUM_THREADS_PER_HALF_WARP = NUM_THREADS_PER_WARP / 2;
@@ -128,6 +144,14 @@ CUTLASS_DEVICE
 int LaneId() {
   int ret; 
   asm ("mov.u32 %0, %%laneid;" : "=r"(ret));
+  return ret;
+}
+
+/// Computes SM number the thread is running on
+CUTLASS_DEVICE
+int SmId() {
+  int ret; 
+  asm ("mov.u32 %0, %%smid;" : "=r"(ret));
   return ret;
 }
 

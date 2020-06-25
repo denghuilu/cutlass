@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -46,6 +46,8 @@ enum class FloatRoundStyle {
   round_to_nearest,             ///< round to nearest even
   round_toward_infinity,        ///< round toward infinity
   round_toward_neg_infinity,    ///< round toward negative infinity
+  round_half_ulp_truncate,      ///< add 0.5ulp to integer representation then round toward zero
+  round_half_ulp_trunc_dntz     ///< like round_half_ulp_truncate, except denorms are rounded *toward* zero
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -242,6 +244,232 @@ struct NumericConverter<half_t, float, FloatRoundStyle::round_toward_zero> {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 //
+// Partial specializations for float <=> bfloat16_t
+//
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// Partial specialization for float <= bfloat16_t
+template <FloatRoundStyle Round>
+struct NumericConverter<float, bfloat16_t, Round> {
+
+  using result_type = float;
+  using source_type = bfloat16_t;
+  static FloatRoundStyle const round_style = Round;
+
+  CUTLASS_HOST_DEVICE
+  static result_type convert(source_type const & s) {
+
+    return static_cast<float>(s);
+  }
+
+  CUTLASS_HOST_DEVICE
+  result_type operator()(source_type const &s) {
+    return convert(s);
+  }
+};
+
+template <>
+struct NumericConverter<bfloat16_t, float, FloatRoundStyle::round_to_nearest> {
+  using result_type = bfloat16_t;
+  using source_type = float;
+  static FloatRoundStyle const round_style = FloatRoundStyle::round_to_nearest;
+
+  CUTLASS_HOST_DEVICE
+  static result_type convert(source_type const & s) {
+    return static_cast<bfloat16_t>(s);
+  }
+
+  CUTLASS_HOST_DEVICE
+  result_type operator()(source_type const &s) {
+    return convert(s);
+  }
+};
+
+template <>
+struct NumericConverter<bfloat16_t, float, FloatRoundStyle::round_half_ulp_truncate> {
+  using result_type = bfloat16_t;
+  using source_type = float;
+  static FloatRoundStyle const round_style = FloatRoundStyle::round_half_ulp_truncate;
+
+  CUTLASS_HOST_DEVICE
+  static result_type convert(source_type const & s) {
+    uint32_t x32 = reinterpret_cast<uint32_t const &>(s);
+
+    #if defined(__CUDA_ARCH__)
+    if (::isfinite(s)) {
+      x32 += 0x8000;
+    }
+    #else
+    if (std::isfinite(s)) {
+      x32 += 0x8000;
+    }
+    #endif
+
+    uint16_t x16 = uint16_t((x32 >> 16) & 0xffff);
+    return bfloat16_t::bitcast(x16);
+  }
+
+  CUTLASS_HOST_DEVICE
+  result_type operator()(source_type const &s) {
+    return convert(s);
+  }
+};
+
+template <>
+struct NumericConverter<bfloat16_t, float, FloatRoundStyle::round_toward_zero> {
+  using result_type = bfloat16_t;
+  using source_type = float;
+  static FloatRoundStyle const round_style = FloatRoundStyle::round_toward_zero;
+
+  CUTLASS_HOST_DEVICE
+  static result_type convert(source_type const & s) {
+
+    uint32_t x32 = reinterpret_cast<uint32_t const &>(s);
+    uint16_t x16 = uint16_t(x32 >> 16);
+
+    return bfloat16_t::bitcast(x16);
+  }
+
+  CUTLASS_HOST_DEVICE
+  result_type operator()(source_type const &s) {
+    return convert(s);
+  }
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Partial specializations for float <=> tfloat32_t
+//
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// Partial specialization for float <= tfloat32_t
+template <FloatRoundStyle Round>
+struct NumericConverter<float, tfloat32_t, Round> {
+
+  using result_type = float;
+  using source_type = tfloat32_t;
+  static FloatRoundStyle const round_style = Round;
+
+  CUTLASS_HOST_DEVICE
+  static result_type convert(source_type const & s) {
+
+    return static_cast<float>(s);
+  }
+
+  CUTLASS_HOST_DEVICE
+  result_type operator()(source_type const &s) {
+    return convert(s);
+  }
+};
+
+template <>
+struct NumericConverter<tfloat32_t, float, FloatRoundStyle::round_to_nearest> {
+  using result_type = tfloat32_t;
+  using source_type = float;
+  static FloatRoundStyle const round_style = FloatRoundStyle::round_to_nearest;
+
+  CUTLASS_HOST_DEVICE
+  static result_type convert(source_type const & s) {
+
+    unsigned storage = reinterpret_cast<unsigned const &>(s);
+
+    if ((storage & 0x7f800000) != 0x7f800000) {
+
+      bool mantissa_bit = ((storage & (1 << 13)) != 0);
+      bool round_bit = ((storage & (1 << 12)) != 0);
+      bool sticky_bit = ((storage & ((1 << 12) - 1)) != 0);
+
+      if ((round_bit && sticky_bit) || (round_bit && mantissa_bit)) {
+        storage += uint32_t(1 << 13);
+      }
+
+      // Note, the following is intentionally commented out. TF32
+      // does not define the low order bits, so they may be left in
+      // an undefined state. 
+      //
+      // By not truncating these bit explicitly, we avoid an extra logical
+      // operation.
+      //
+      // TF32 may be implicitly converted to float by performing this
+      // operation as needed.
+      //
+      // storage = (storage & ~0x1fff);
+    }
+    else if (storage & ~0xff800000) {
+      storage = 0x7fffffff;
+    }
+
+    return tfloat32_t::bitcast(storage);
+  }
+
+  CUTLASS_HOST_DEVICE
+  result_type operator()(source_type const &s) {
+    return convert(s);
+  }
+};
+
+template <>
+struct NumericConverter<tfloat32_t, float, FloatRoundStyle::round_half_ulp_truncate> {
+  using result_type = tfloat32_t;
+  using source_type = float;
+  static FloatRoundStyle const round_style = FloatRoundStyle::round_half_ulp_truncate;
+
+  CUTLASS_HOST_DEVICE
+  static result_type convert(source_type const & s) {
+    return tfloat32_t::round_half_ulp_truncate(s);
+  }
+
+  CUTLASS_HOST_DEVICE
+  result_type operator()(source_type const &s) {
+    return convert(s);
+  }
+};
+
+/// This rounding operation is similar to half_ulp_truncate except it rounds denorms toward zero.
+/// It avoids predicated code, though it requires a temporary register.
+template <>
+struct NumericConverter<tfloat32_t, float, FloatRoundStyle::round_half_ulp_trunc_dntz> {
+  using result_type = tfloat32_t;
+  using source_type = float;
+  static FloatRoundStyle const round_style = FloatRoundStyle::round_half_ulp_trunc_dntz;
+
+  CUTLASS_HOST_DEVICE
+  static result_type convert(source_type const & s) {
+
+    unsigned y = reinterpret_cast<unsigned const &>(s);
+    y = y & 0xff800000;
+    float d = reinterpret_cast<float const &>(y);
+    float z = d / float(1 << 11) + s;
+
+    return reinterpret_cast<result_type const &>(z);
+  }
+
+  CUTLASS_HOST_DEVICE
+  result_type operator()(source_type const &s) {
+    return convert(s);
+  }
+};
+
+template <>
+struct NumericConverter<tfloat32_t, float, FloatRoundStyle::round_toward_zero> {
+  using result_type = tfloat32_t;
+  using source_type = float;
+  static FloatRoundStyle const round_style = FloatRoundStyle::round_toward_zero;
+
+  CUTLASS_HOST_DEVICE
+  static result_type convert(source_type const & s) {
+    uint32_t x = reinterpret_cast<uint32_t const &>(s);
+    return tfloat32_t::bitcast(x & 0xffffe000);
+  }
+
+  CUTLASS_HOST_DEVICE
+  result_type operator()(source_type const &s) {
+    return convert(s);
+  }
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//
 // Conversion and Clamp operator for Integers
 //
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -268,8 +496,7 @@ struct NumericConverterClamp {
     result_type const kClamp_min = -kClamp_max - 1;
     bool is_int_min = !(s > kClamp_min);
     bool is_int_max = !(s < kClamp_max);
-
-    return (is_int_min ? kClamp_min : (is_int_max ? kClamp_max : convert_op(s)));
+    return is_int_min ? kClamp_min : (is_int_max ? kClamp_max : convert_op(s));
   }
 
   CUTLASS_HOST_DEVICE
@@ -295,15 +522,15 @@ struct NumericConverterClamp<T, float> {
   CUTLASS_HOST_DEVICE
     static result_type convert(source_type const & s) {
 
-    NumericConverter<result_type, source_type> convert_op;
+    NumericConverter<result_type, double> convert_op;
 
-    float kClamp_max = float((1 << (sizeof_bits<result_type>::value - 1)) - 1);
-    float kClamp_min = -kClamp_max - 1;
+    double kClamp_max = double((1U << (sizeof_bits<result_type>::value - 1)) - 1);
+    double kClamp_min = -kClamp_max - 1;
 
-    float source = s;
+    double source = s;
 
-    source = fmaxf(source, kClamp_min);
-    source = fminf(source, kClamp_max);
+    source = fmax(source, kClamp_min);
+    source = fmin(source, kClamp_max);
 
     return convert_op(source);
   }
@@ -352,6 +579,24 @@ struct NumericArrayConverter {
     return convert(s);
   }
 };
+
+template <
+  typename T,
+  int N,
+  FloatRoundStyle Round
+>
+struct NumericArrayConverter<T, T, N, Round> {
+
+  using result_type = Array<T, N>;
+  using source_type = Array<T, N>;
+  static FloatRoundStyle const round_style = Round;
+
+  CUTLASS_HOST_DEVICE
+  result_type operator()(source_type const &s) {
+    return s;
+  }
+};
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -498,10 +743,86 @@ struct NumericArrayConverter<float, half_t, N, Round> {
   }
 };
 
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 800)
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// Partial specialization for Array<bfloat16_t, 2> <= Array<float, 2>, round to nearest
+template <>
+struct NumericArrayConverter<bfloat16_t, float, 2, FloatRoundStyle::round_to_nearest> {
+
+  using result_type = Array<bfloat16_t, 2>;
+  using source_type = Array<float, 2>;
+  static FloatRoundStyle const round_style = FloatRoundStyle::round_to_nearest;
+
+  CUTLASS_HOST_DEVICE
+  static result_type convert(source_type const & source) {
+
+    unsigned d;
+
+    asm("cvt.rn.bf16x2.f32 %0, %1, %2;\n" : "=r"(d) : "f"(source[1]), "f"(source[0]) );
+
+    return reinterpret_cast<result_type const &>(d);
+  }
+
+  CUTLASS_HOST_DEVICE
+  result_type operator()(source_type const &s) {
+    return convert(s);
+  }
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// Partial specialization for Array<half> <= Array<float>
+template <
+  int N,
+  FloatRoundStyle Round
+>
+struct NumericArrayConverter<bfloat16_t, float, N, Round> {
+
+  using result_type = Array<bfloat16_t, N>;
+  using source_type = Array<float, N>;
+  static FloatRoundStyle const round_style = Round;
+
+  CUTLASS_HOST_DEVICE
+  static result_type convert(source_type const & source) {
+
+    NumericArrayConverter<bfloat16_t, float, 2, Round> convert_vector_;
+    NumericConverter<bfloat16_t, float, Round> convert_element_;
+
+    result_type result;
+
+    Array<bfloat16_t, 2> *result_ptr = reinterpret_cast<Array<bfloat16_t, 2> *>(&result);
+    Array<float, 2> const *source_ptr = reinterpret_cast<Array<float, 2> const *>(&source);
+
+    CUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < N / 2; ++i) {
+      result_ptr[i] = convert_vector_(source_ptr[i]);
+    }
+
+    if (N % 2) {
+      result[N - 1] = convert_element_(source[N - 1]);
+    }
+
+    return result;
+  }
+
+  CUTLASS_HOST_DEVICE
+  result_type operator()(source_type const &s) {
+    return convert(s);
+  }
+};
+
+#endif // if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 800)
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Conditional guards to enable partial specialization for packed integers 
-#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 720) && (__CUDACC_VER_MAJOR__ >= 10) && (__CUDACC_VER_MINOR__ >= 2)
+#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 720) && \
+    ((__CUDACC_VER_MAJOR__ > 10) ||                     \
+     ((__CUDACC_VER_MAJOR__ >= 10) && (__CUDACC_VER_MINOR__ >= 2)))
 
 /// Partial specialization for Array<int8_t, 1> <= Array<int, 1>
 template <
@@ -625,12 +946,13 @@ struct NumericArrayConverter<int8_t, int, N, Round> {
     return convert(s);
   }
 };
-
-#endif  // Conditional guards to enable partial specialization for packed integers
+#endif
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 750) && (__CUDACC_VER_MAJOR__ >= 10) && (__CUDACC_VER_MINOR__ >= 2)
+#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 750) && \
+    ((__CUDACC_VER_MAJOR__ > 10) ||                     \
+     ((__CUDACC_VER_MAJOR__ >= 10) && (__CUDACC_VER_MINOR__ >= 2)))
 
 /// Partial specialization for Array<int4b_t, 8> <= Array<int, 8>
 template <
@@ -707,4 +1029,127 @@ struct NumericArrayConverter<int4b_t, int, N, Round> {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
+/// FastNumericArrayConverter only works when the source is within center range.
+/// Conversion operator for Array
+template <typename T, typename S, int N,
+          FloatRoundStyle Round = FloatRoundStyle::round_to_nearest>
+struct FastNumericArrayConverter {
+  using result_type = Array<T, N>;
+  using source_type = Array<S, N>;
+  static FloatRoundStyle const round_style = Round;
+
+  CUTLASS_DEVICE
+  static result_type convert(source_type const &s) {
+    result_type result;
+    NumericArrayConverter<T, S, N, Round> convert_;
+
+    return convert_(s);
+  }
+
+  CUTLASS_DEVICE
+  result_type operator()(source_type const &s) { return convert(s); }
+};
+
+/// Partial specialization for Array<float> <= Array<int>
+template <typename T, int N, FloatRoundStyle Round>
+struct FastNumericArrayConverter<float, T, N, Round> {
+  using result_type = Array<float, N>;
+  using source_type = Array<T, N>;
+  static FloatRoundStyle const round_style = Round;
+
+  CUTLASS_DEVICE
+  static result_type convert(source_type const &source) {
+    result_type result;
+
+    CUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < N; ++i) {
+      int tmp = source[i] + 1262485504 /*0x4B400000*/;
+      result[i] = reinterpret_cast<float const &>(tmp) - 12582912.0f;
+    }
+
+    return result;
+  }
+
+  CUTLASS_DEVICE
+  result_type operator()(source_type const &s) { return convert(s); }
+};
+
+/// Partial specialization for Array<int8_t, 4> <= Array<float, 4>
+template <FloatRoundStyle Round>
+struct FastNumericArrayConverter<int8_t, float, 4, Round> {
+  using result_type = Array<int8_t, 4>;
+  using source_type = Array<float, 4>;
+  static FloatRoundStyle const round_style = Round;
+
+  CUTLASS_DEVICE
+  static result_type convert(source_type const &source) {
+    Array<int32_t, 4> result;
+
+    CUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < 4; ++i) {
+      float tmp = source[i] + 12582912.0f;
+      result[i] = reinterpret_cast<int32_t const &>(tmp);
+    }
+
+    result[0] = __byte_perm(result[0], result[1], 0x40);
+    result[2] = __byte_perm(result[2], result[3], 0x40);
+    result[0] = __byte_perm(result[0], result[2], 0x5410);
+
+    return reinterpret_cast<result_type const &>(result[0]);
+  }
+
+  CUTLASS_DEVICE
+  result_type operator()(source_type const &s) { return convert(s); }
+};
+
+/// Partial specialization for Array<int8_t> <= Array<float>
+template <int N, FloatRoundStyle Round>
+struct FastNumericArrayConverter<int8_t, float, N, Round> {
+  static_assert(!(N % 4), "N must be multiple of 4.");
+
+  using result_type = Array<int8_t, N>;
+  using source_type = Array<float, N>;
+  static FloatRoundStyle const round_style = Round;
+
+  CUTLASS_DEVICE
+  static result_type convert(source_type const &source) {
+    FastNumericArrayConverter<int8_t, float, 4, Round> convert_vector_;
+
+    result_type result;
+
+    Array<int8_t, 4> *result_ptr =
+        reinterpret_cast<Array<int8_t, 4> *>(&result);
+    Array<float, 4> const *source_ptr =
+        reinterpret_cast<Array<float, 4> const *>(&source);
+
+    CUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < N / 4; ++i) {
+      result_ptr[i] = convert_vector_(source_ptr[i]);
+    }
+
+    return result;
+  }
+
+  CUTLASS_DEVICE
+  result_type operator()(source_type const &s) { return convert(s); }
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// Defines preferred rounding mode for a pair of types
+template <typename T, typename S>
+struct PreferredRoundingMode {
+  static FloatRoundStyle const kRound = FloatRoundStyle::round_to_nearest;
+};
+
+/// Defines preferred rounding mode for a pair of types
+template <>
+struct PreferredRoundingMode<tfloat32_t, float> {
+  static FloatRoundStyle const kRound = FloatRoundStyle::round_half_ulp_truncate;
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
 } // namespace cutlass
+
+/////////////////////////////////////////////////////////////////////////////////////////////////

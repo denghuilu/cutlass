@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification, are permitted
 # provided that the following conditions are met:
@@ -20,15 +20,9 @@
 # STRICT LIABILITY, OR TOR (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cutlass_add_executable(
+cutlass_example_add_executable(
   03_visualize_layout
   visualize_layout.cpp
   register_layout.cu
   )
 
-target_link_libraries(
-  03_visualize_layout
-  PRIVATE
-  CUTLASS
-  cutlass_tools_util_includes
-  )

@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -27,7 +27,11 @@
 */
 #pragma once
 
+#if defined(__CUDACC_RTC__)
+#include <cuda/std/cassert>
+#else
 #include <assert.h>
+#endif
 
 #include "mma.h"
 #include "cutlass/layout/matrix.h"
@@ -84,6 +88,7 @@ struct Mma<
   using FragmentC = Array<half_t, 8>;
 
   using Operator = OpMultiplyAdd;
+  using ArchTag = arch::Sm70;
 
   CUTLASS_HOST_DEVICE
   void operator()(
@@ -139,6 +144,7 @@ struct Mma<
   using FragmentC = Array<half_t, 8>;
 
   using Operator = OpMultiplyAdd;
+  using ArchTag = arch::Sm70;
 
   CUTLASS_HOST_DEVICE
   void operator()(
@@ -194,6 +200,7 @@ struct Mma<
   using FragmentC = Array<half_t, 8>;
 
   using Operator = OpMultiplyAdd;
+  using ArchTag = arch::Sm70;
 
   CUTLASS_HOST_DEVICE
   void operator()(
@@ -249,6 +256,7 @@ struct Mma<
   using FragmentC = Array<half_t, 8>;
 
   using Operator = OpMultiplyAdd;
+  using ArchTag = arch::Sm70;
 
   CUTLASS_HOST_DEVICE
   void operator()(
@@ -310,6 +318,7 @@ struct Mma<
   using FragmentC = Array<float, 8>;
 
   using Operator = OpMultiplyAdd;
+  using ArchTag = arch::Sm70;
 
   /// Multiply-add
   CUTLASS_HOST_DEVICE
@@ -385,6 +394,7 @@ struct Mma<
   using FragmentC = Array<float, 8>;
 
   using Operator = OpMultiplyAdd;
+  using ArchTag = arch::Sm70;
 
   /// Multiply-add
   CUTLASS_HOST_DEVICE
@@ -460,6 +470,7 @@ struct Mma<
   using FragmentC = Array<float, 8>;
 
   using Operator = OpMultiplyAdd;
+  using ArchTag = arch::Sm70;
 
   /// Multiply-add
   CUTLASS_HOST_DEVICE
@@ -535,6 +546,7 @@ struct Mma<
   using FragmentC = Array<float, 8>;
 
   using Operator = OpMultiplyAdd;
+  using ArchTag = arch::Sm70;
 
   /// Multiply-add
   CUTLASS_HOST_DEVICE

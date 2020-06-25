@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -116,6 +116,11 @@ public:
     return PitchLinearCoord(Base::operator-(b));
   }
 
+  CUTLASS_HOST_DEVICE
+  PitchLinearCoord operator-() const {
+    return PitchLinearCoord(-at(0), -at(1));
+  }
+
   /// Element-wise multiplication
   CUTLASS_HOST_DEVICE
   PitchLinearCoord operator*(Base const& b) const {
@@ -211,7 +216,7 @@ public:
   /// Assumes coordinate has convention (contiguous, strided)
   CUTLASS_HOST_DEVICE
   LongIndex operator()(TensorCoord const &coord) const {
-    return coord.contiguous() + coord.strided() * stride_[0];
+    return LongIndex(coord.contiguous()) + LongIndex(coord.strided()) * LongIndex(stride_[0]);
   }
 
   /// Returns the logical coordinate given an offset.

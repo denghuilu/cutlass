@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -32,7 +32,11 @@
 
 #include "cutlass/cutlass.h"
 
+// CUTLASS Profiler includes
 #include "enumerated_types.h"
+
+// CUTLASS Library includes
+#include "cutlass/library/library.h"
 
 namespace cutlass {
 namespace profiler {
@@ -45,16 +49,23 @@ struct PerformanceResult {
   /// Index of problem
   size_t problem_index;
 
-  /// Provider
-  Provider provider;
+  /// library::Provider
+  library::Provider provider;
 
-  /// Outcome of test
-  Disposition disposition;
+  /// Operation kind
+  library::OperationKind op_kind;
 
-  /// CUTLASS status result from kernels
+  /// CUTLASS status result from kernels (success or failure)
+  // Status does information on verification
   Status status;
 
-  /// Operation object
+  /// Outcome of verification (worst case verification result)
+  Disposition disposition;
+  
+  /// Outcome of verification (all verification results)
+  DispositionMap verification_map;
+
+  /// Operation name
   std::string operation_name;
 
   /// Stringified vector of argument values
@@ -76,7 +87,8 @@ struct PerformanceResult {
   /// Ctor
   PerformanceResult(): 
     problem_index(0),
-    provider(Provider::kInvalid), 
+    op_kind(library::OperationKind::kInvalid),
+    provider(library::Provider::kInvalid), 
     disposition(Disposition::kNotRun),
     status(Status::kInvalid),
     bytes(0), 
@@ -107,3 +119,4 @@ using PerformanceResultVector = std::vector<PerformanceResult>;
 
 } // namespace profiler
 } // namespace cutlass
+

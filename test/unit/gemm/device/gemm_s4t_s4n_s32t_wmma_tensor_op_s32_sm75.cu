@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -66,13 +66,13 @@ TEST(SM75_Device_Gemm_s4t_s4n_s32t_wmma_tensor_op_s32, 128x256x128_64x64x128_8x8
     cutlass::gemm::GemmShape<128, 256, 128>,
     cutlass::gemm::GemmShape<64, 64, 128>,
     cutlass::gemm::GemmShape<8, 8, 32>,
-    cutlass::epilogue::thread::LinearCombination<
+    cutlass::epilogue::thread::LinearCombinationClamp<
       ElementOutput,
       128 / cutlass::sizeof_bits<ElementOutput>::value,
       ElementAccumulator,
       ElementCompute
     >,
-    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle,
+    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>,
     2
   >;
 
@@ -98,13 +98,13 @@ TEST(SM75_Device_Gemm_s4t_s4n_s32t_wmma_tensor_op_s32, 256x128x128_64x64x128_8x8
     cutlass::gemm::GemmShape<256, 128, 128>,
     cutlass::gemm::GemmShape<64, 64, 128>,
     cutlass::gemm::GemmShape<8, 8, 32>,
-    cutlass::epilogue::thread::LinearCombination<
+    cutlass::epilogue::thread::LinearCombinationClamp<
       ElementOutput,
       128 / cutlass::sizeof_bits<ElementOutput>::value,
       ElementAccumulator,
       ElementCompute
     >,
-    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle,
+    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>,
     2
   >;
 
@@ -130,13 +130,13 @@ TEST(SM75_Device_Gemm_s4t_s4n_s32t_wmma_tensor_op_s32, 128x128x128_64x64x128_8x8
     cutlass::gemm::GemmShape<128, 128, 128>,
     cutlass::gemm::GemmShape<64, 64, 128>,
     cutlass::gemm::GemmShape<8, 8, 32>,
-    cutlass::epilogue::thread::LinearCombination<
+    cutlass::epilogue::thread::LinearCombinationClamp<
       ElementOutput,
       128 / cutlass::sizeof_bits<ElementOutput>::value,
       ElementAccumulator,
       ElementCompute
     >,
-    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle,
+    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>,
     2
   >;
 
@@ -162,13 +162,13 @@ TEST(SM75_Device_Gemm_s4t_s4n_s32t_wmma_tensor_op_s32, 64x128x128_32x64x128_8x8x
     cutlass::gemm::GemmShape<64, 128, 128>,
     cutlass::gemm::GemmShape<32, 64, 128>,
     cutlass::gemm::GemmShape<8, 8, 32>,
-    cutlass::epilogue::thread::LinearCombination<
+    cutlass::epilogue::thread::LinearCombinationClamp<
       ElementOutput,
       128 / cutlass::sizeof_bits<ElementOutput>::value,
       ElementAccumulator,
       ElementCompute
     >,
-    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle,
+    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>,
     2
   >;
 
@@ -194,13 +194,13 @@ TEST(SM75_Device_Gemm_s4t_s4n_s32t_wmma_tensor_op_s32, 128x64x128_64x32x128_8x8x
     cutlass::gemm::GemmShape<128, 64, 128>,
     cutlass::gemm::GemmShape<64, 32, 128>,
     cutlass::gemm::GemmShape<8, 8, 32>,
-    cutlass::epilogue::thread::LinearCombination<
+    cutlass::epilogue::thread::LinearCombinationClamp<
       ElementOutput,
       128 / cutlass::sizeof_bits<ElementOutput>::value,
       ElementAccumulator,
       ElementCompute
     >,
-    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle,
+    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>,
     2
   >;
 
@@ -226,13 +226,13 @@ TEST(SM75_Device_Gemm_s4t_s4n_s32t_wmma_tensor_op_s32, 64x64x128_32x32x128_8x8x3
     cutlass::gemm::GemmShape<64, 64, 128>,
     cutlass::gemm::GemmShape<32, 32, 128>,
     cutlass::gemm::GemmShape<8, 8, 32>,
-    cutlass::epilogue::thread::LinearCombination<
+    cutlass::epilogue::thread::LinearCombinationClamp<
       ElementOutput,
       128 / cutlass::sizeof_bits<ElementOutput>::value,
       ElementAccumulator,
       ElementCompute
     >,
-    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle,
+    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>,
     2
   >;
 

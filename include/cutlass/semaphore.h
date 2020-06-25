@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -66,8 +66,13 @@ public:
   /// Permit fetching the synchronization mechanism early
   CUTLASS_DEVICE
   void fetch() {
-
-    asm volatile ("ld.global.cg.s32 %0, [%1];\n" : "=r"(state) : "l"(lock));
+    if (wait_thread) {
+      #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+      asm volatile ("ld.global.acquire.gpu.b32 %0, [%1];\n" : "=r"(state) : "l"(lock));  
+      #else
+      asm volatile ("ld.global.cg.b32 %0, [%1];\n" : "=r"(state) : "l"(lock));  
+      #endif
+    }
   }
 
   /// Gets the internal state
@@ -80,14 +85,8 @@ public:
   CUTLASS_DEVICE
   void wait(int status = 0) {
 
-    if (wait_thread) {
-      while (state != status) {
-
-        fetch();
-
-        __syncwarp(0x01);
-
-      };
+    while( __syncthreads_and(state != status) ) {
+      fetch();
     }
 
     __syncthreads();
@@ -99,8 +98,11 @@ public:
     __syncthreads();
 
     if (wait_thread) {
-
-      asm volatile ("st.global.cg.s32 [%0], %1;\n" : : "l"(lock), "r"(status));
+      #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+      asm volatile ("st.global.release.gpu.b32 [%0], %1;\n" : : "l"(lock), "r"(status));
+      #else
+      asm volatile ("st.global.cg.b32 [%0], %1;\n" : : "l"(lock), "r"(status));
+      #endif
     }
   }
 };

@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -33,6 +33,9 @@
 
 #include "cutlass/cutlass.h"
 #include "cutlass/library/library.h"
+#include "cutlass/library/util.h"
+
+#include "options.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -45,7 +48,10 @@ namespace profiler {
 Status get_cutlass_status(cublasStatus_t cublas);
 
 /// Maps a CUTLASS tensor layout to a cuBLAS transpose operation
-cublasOperation_t get_cublas_transpose_operation(library::LayoutTypeID layout);
+bool get_cublas_transpose_operation(
+  cublasOperation_t &operation,
+  library::LayoutTypeID layout,
+  library::ComplexTransform transform = library::ComplexTransform::kNone);
 
 /// Maps a CUTLASS numeric type to a cuBLAS data type enumeration
 bool get_cublas_datatype(cublasDataType_t &data_type, library::NumericTypeID element_type);
@@ -85,6 +91,125 @@ public:
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
+
+namespace detail {
+
+/// Selects one or more cuBLAS algorithms.
+static void select_cublas_algorithms(
+  std::vector<cublasGemmAlgo_t> &algorithms,
+  Options const &options, 
+  library::GemmDescription const &op_desc) {
+
+  library::OpcodeClassID const & opcode_class = 
+    op_desc.tile_description.math_instruction.opcode_class;
+
+  switch (options.library.algorithm_mode) {
+    case AlgorithmMode::kMatching:
+    {
+      algorithms.push_back(get_cublas_gemm_algo(
+        op_desc.tile_description.threadblock_shape.m(), 
+        op_desc.tile_description.threadblock_shape.n(), 
+        op_desc.tile_description.threadblock_shape.k(), 
+        opcode_class));
+      break;
+    }
+
+    case AlgorithmMode::kBest:
+    {
+      // Choose first enumerated mode. If none are enumerated, choose based on opcode class
+      // and evaluate all of them.
+
+      if (options.library.algorithms.empty()) {
+        // Enumerate all algorithms
+        if (opcode_class == library::OpcodeClassID::kSimt) {
+          
+          for (int algo = CUBLAS_GEMM_DEFAULT; 
+            algo <= CUBLAS_GEMM_ALGO23; 
+            ++algo) {
+
+            algorithms.push_back(cublasGemmAlgo_t(algo));
+          }
+        }
+        else {
+          
+          for (int algo = CUBLAS_GEMM_DEFAULT_TENSOR_OP; 
+            algo <= CUBLAS_GEMM_ALGO15_TENSOR_OP; 
+            ++algo) {
+
+            algorithms.push_back(cublasGemmAlgo_t(algo));
+          }
+        }
+      }
+      else {
+        // Use the listed algorithms
+        algorithms.reserve(options.library.algorithms.size());
+
+        for (int algo : options.library.algorithms) {
+          algorithms.push_back(reinterpret_cast<cublasGemmAlgo_t const &>(algo));
+        }
+      }
+
+      break;
+    }
+
+    case AlgorithmMode::kDefault:
+    {
+
+      // Use the library's default algorithm
+      algorithms.push_back((opcode_class == library::OpcodeClassID::kSimt ? 
+        CUBLAS_GEMM_DEFAULT : CUBLAS_GEMM_DEFAULT_TENSOR_OP)); 
+
+      break;
+    }
+    default:
+    {
+      break;
+    }
+  }
+}
+
+/// Dispatcher to cublasGemmEx() 
+struct cublasGemmExDispatcher {
+
+  //
+  // Data members
+  //
+  library::GemmUniversalConfiguration configuration;
+  library::GemmUniversalArguments arguments;
+
+  // cublass-specific data structures to fill cublas API call arguments
+  cublasOperation_t trans_A;
+  cublasOperation_t trans_B;
+  cudaDataType_t data_type_A;
+  cudaDataType_t data_type_B;
+  cudaDataType_t data_type_C;
+  cudaDataType_t compute_data_type;
+
+#if (__CUDA_VER_MAJOR__ >= 11)
+  cublasComputeType_t compute_type;
+#endif
+
+  cublasGemmAlgo_t algo;
+  Status status;
+  
+  //
+  // Methods
+  //
+
+  cublasGemmExDispatcher( 
+    library::GemmDescription const &op_desc,
+    library::GemmUniversalConfiguration configuration_,
+    library::GemmUniversalArguments arguments_,
+    cublasGemmAlgo_t algorithm = CUBLAS_GEMM_DFALT
+  );
+
+  /// Executes GEMM using these arguments
+  cublasStatus_t operator()(cublasHandle_t handle);
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+} // namespace detail
 
 } // namespace profiler
 } // namespace cutlass

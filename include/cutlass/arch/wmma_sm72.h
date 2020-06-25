@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -28,7 +28,11 @@
 
 #pragma once
 
+#if defined(__CUDACC_RTC__)
+#include <cuda/std/cassert>
+#else
 #include <assert.h>
+#endif
 #include "cutlass/layout/matrix.h"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -65,6 +69,7 @@ struct Wmma<
   using ElementC = int32_t;
   using LayoutC = LayoutC_;
   using Operator = cutlass::arch::OpMultiplyAdd;
+  using ArchTag = arch::Sm72;
 
   // check supported wmma shape for the given multiplicand data types
   static_assert(
@@ -145,6 +150,7 @@ struct Wmma<
   using ElementC = int32_t;
   using LayoutC = LayoutC_;
   using Operator = cutlass::arch::OpMultiplyAdd;
+  using ArchTag = arch::Sm72;
 
   // check supported wmma shape for the given multiplicand data types
   static_assert(

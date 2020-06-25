@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -27,6 +27,10 @@
 */
 
 #pragma once
+// CUTLASS Library includes
+#include "cutlass/library/library.h"
+#include "cutlass/library/manifest.h"
+#include "cutlass/library/singleton.h"
 
 #include "options.h"
 #include "operation_profiler.h"

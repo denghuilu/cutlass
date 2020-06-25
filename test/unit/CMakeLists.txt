@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification, are permitted
 # provided that the following conditions are met:
@@ -33,7 +33,7 @@ target_link_libraries(
   PUBLIC
   CUTLASS
   cutlass_tools_util_includes
-  $<$<BOOL:${CUTLASS_ENABLE_CUBLAS}>:cublas>
+  $<$<BOOL:${CUTLASS_ENABLE_CUBLAS}>:nvidia::cublas>
   gtest
   )
 
@@ -48,6 +48,9 @@ target_link_libraries(
   PUBLIC
   cutlass_test_unit_infra
   )
+
+set(CUTLASS_INSTALL_TESTS ON CACHE BOOL "Install test executables")
+set(CUTLASS_TEST_EXECUTION_ENVIRONMENT "" CACHE BOOL "Environment in which to invoke unit test executables")
   
 function(cutlass_test_unit_add_executable)
 
@@ -65,7 +68,7 @@ function(cutlass_test_unit_add_executable)
     PRIVATE
     cutlass_test_unit_infra
     cutlass_test_unit_infra_lib
-    )
+  )
 
   string(REGEX REPLACE cutlass_ "" NAME_STEM ${NAME})
 
@@ -74,12 +77,19 @@ function(cutlass_test_unit_add_executable)
   add_custom_target(
     ${NAME_STEM}
     COMMAND
-    $<TARGET_FILE:${NAME}>
+    ${CUTLASS_TEST_EXECUTION_ENVIRONMENT} $<TARGET_FILE:${NAME}>
   DEPENDS
     ${NAME}
     )
 
-  # message(STATUS "cutlass_test_unit_add_executable(${NAME} c${NAME_STEM} ${NAME_STEM})")
+  if (CUTLASS_INSTALL_TESTS)
+
+    install(
+      TARGETS ${NAME}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+      )
+
+  endif()
 
 endfunction()
 

@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -65,13 +65,11 @@ TEST(SM75_Device_Gemm_s8t_s8n_s8n_wmma_tensor_op_s32, 128x128x32_64x64x32_16x16x
     cutlass::gemm::GemmShape<128, 128, 32>,
     cutlass::gemm::GemmShape<64, 64, 32>,
     cutlass::gemm::GemmShape<16, 16, 16>,
-    cutlass::epilogue::thread::LinearCombinationClamp<
+    cutlass::epilogue::thread::FastLinearCombinationClamp<
       ElementOutput,
-      128 / cutlass::sizeof_bits<ElementOutput>::value,
-      ElementAccumulator,
-      ElementAccumulator
+      128 / cutlass::sizeof_bits<ElementOutput>::value
     >,
-    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle,
+    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>,
     2
   >;
 
@@ -96,13 +94,11 @@ TEST(SM75_Device_Gemm_s8t_s8n_s8n_wmma_tensor_op_s32, 64x128x64_32x32x64_16x16x1
     cutlass::gemm::GemmShape<64, 128, 64>,
     cutlass::gemm::GemmShape<32, 32, 64>,
     cutlass::gemm::GemmShape<16, 16, 16>,
-    cutlass::epilogue::thread::LinearCombinationClamp<
+    cutlass::epilogue::thread::FastLinearCombinationClamp<
       ElementOutput,
-      128 / cutlass::sizeof_bits<ElementOutput>::value,
-      ElementAccumulator,
-      ElementAccumulator
+      128 / cutlass::sizeof_bits<ElementOutput>::value
     >,
-    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle,
+    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>,
     2
   >;
 
@@ -130,13 +126,11 @@ TEST(SM75_Device_Gemm_s8t_s8n_s8n_wmma_tensor_op_s32, 64x128x64_32x64x64_32x8x16
     cutlass::gemm::GemmShape<64, 128, 64>,
     cutlass::gemm::GemmShape<32, 64, 64>,
     cutlass::gemm::GemmShape<32, 8, 16>,
-    cutlass::epilogue::thread::LinearCombinationClamp<
+    cutlass::epilogue::thread::FastLinearCombinationClamp<
       ElementOutput,
-      128 / cutlass::sizeof_bits<ElementOutput>::value,
-      ElementAccumulator,
-      ElementAccumulator
+      128 / cutlass::sizeof_bits<ElementOutput>::value
     >,
-    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle,
+    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>,
     2
   >;
 
@@ -164,13 +158,11 @@ TEST(SM75_Device_Gemm_s8t_s8n_s8n_wmma_tensor_op_s32, 64x128x64_32x64x64_8x32x16
     cutlass::gemm::GemmShape<64, 128, 64>,
     cutlass::gemm::GemmShape<32, 64, 64>,
     cutlass::gemm::GemmShape<8, 32, 16>,
-    cutlass::epilogue::thread::LinearCombinationClamp<
+    cutlass::epilogue::thread::FastLinearCombinationClamp<
       ElementOutput,
-      128 / cutlass::sizeof_bits<ElementOutput>::value,
-      ElementAccumulator,
-      ElementAccumulator
+      128 / cutlass::sizeof_bits<ElementOutput>::value
     >,
-    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle,
+    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>,
     2
   >;
 

@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -38,7 +38,6 @@
 #include "cutlass/layout/matrix.h"
 #include "cutlass/layout/pitch_linear.h"
 #include "cutlass/layout/tensor.h"
-#include "cutlass/layout/tensor_nhwc.h"
 #include "cutlass/layout/vector.h"
 
 #include "cutlass/layout/tensor_op_multiplicand_sm70.h"

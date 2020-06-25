@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification, are permitted
 # provided that the following conditions are met:
@@ -22,16 +22,14 @@
 
 set(CUTLASS_EXAMPLES_COMMON_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/common)
 
-function(cutlass_example_add_executable)
+function(cutlass_example_add_executable NAME)
 
   set(options)
   set(oneValueArgs)
   set(multiValueArgs)
   cmake_parse_arguments(_ "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-  cutlass_add_executable(${__UNPARSED_ARGUMENTS})
-
-  list(GET __UNPARSED_ARGUMENTS 0 NAME)
+  cutlass_add_executable(${NAME} ${__UNPARSED_ARGUMENTS})
 
   target_link_libraries(
     ${NAME}
@@ -46,9 +44,18 @@ function(cutlass_example_add_executable)
     ${CUTLASS_EXAMPLES_COMMON_SOURCE_DIR}
     )
 
+  add_custom_target(
+    test_${NAME}
+    COMMAND
+    ${CUTLASS_TEST_EXECUTION_ENVIRONMENT} $<TARGET_FILE:${NAME}>
+  DEPENDS
+    ${NAME}
+    )
+
 endfunction()
 
 add_custom_target(cutlass_examples)
+add_custom_target(test_examples)
 
 foreach(EXAMPLE
   00_basic_gemm
@@ -59,9 +66,15 @@ foreach(EXAMPLE
   05_batched_gemm
   06_splitK_gemm
   07_volta_tensorop_gemm
-  08_turing_tensorop_gemm)
+  08_turing_tensorop_gemm
+  10_planar_complex
+  11_planar_complex_array
+  12_gemm_bias_relu
+  13_fused_two_gemms
+)
 
   add_subdirectory(${EXAMPLE})
   add_dependencies(cutlass_examples ${EXAMPLE})
+  add_dependencies(test_examples test_${EXAMPLE})
 
 endforeach()

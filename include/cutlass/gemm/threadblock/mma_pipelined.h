@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -75,7 +75,7 @@ template <
     typename IteratorA_::Element, 
     IteratorA_::Fragment::kElements>,
   ///
-  /// Transformation applied to A operand
+  /// Transformation applied to B operand
   typename TransformB_ = NumericArrayConverter<
     typename SmemIteratorB_::Element, 
     typename IteratorB_::Element, 
@@ -117,6 +117,15 @@ public:
 
   /// Warp-level Mma
   using Operator = typename Policy::Operator;
+
+  /// Obtain the arch tag from the warp-level operator
+  using ArchTag = typename Policy::Operator::ArchTag;
+
+  /// Complex transform on A operand
+  static ComplexTransform const kTransformA = Operator::kTransformA;
+
+  /// Complex transform on B operand
+  static ComplexTransform const kTransformB = Operator::kTransformB;
 
   // staticaly assert kStages for MmaPipelined is two (Double-buffered pipeline)
   static_assert((Base::kStages==2), "MmaPipelined requires kStages set to value 2");
@@ -256,8 +265,8 @@ public:
 
           __syncthreads();
           
-          ++this->smem_iterator_B_;
           ++this->smem_iterator_A_;
+          ++this->smem_iterator_B_;
 
           // Add negative offsets to return iterators to the 'start' of the circular buffer in shared memory
           if (smem_write_stage_idx == 1) {
@@ -299,7 +308,8 @@ public:
           }
         }
 
-        warp_mma(accum, warp_frag_A[warp_mma_k % 2], warp_frag_B[warp_mma_k % 2], accum);
+        warp_mma(accum, warp_frag_A[warp_mma_k % 2],
+                 warp_frag_B[warp_mma_k % 2], accum);
       }
     }
 
@@ -311,3 +321,5 @@ public:
 } // namespace threadblock
 } // namespace gemm
 } // namespace cutlass
+
+/////////////////////////////////////////////////////////////////////////////////////////////////

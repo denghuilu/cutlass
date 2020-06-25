@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -33,7 +33,11 @@
     defined in cutlass/tensor_ref.h.
 */
 #pragma once
+#if defined(__CUDACC_RTC__)
+#include <cuda/std/cassert>
+#else
 #include "assert.h"
+#endif
 #include "cutlass/cutlass.h"
 #include "cutlass/fast_math.h"
 #include "cutlass/layout/matrix.h"

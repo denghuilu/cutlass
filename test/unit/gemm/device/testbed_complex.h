@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -25,6 +25,8 @@
 /*! \file
     \brief Tests for device-wide GEMM interface
 */
+
+#pragma once
 
 #include <iostream>
 #include <fstream>
@@ -90,6 +92,7 @@ struct TestbedComplex : public Testbed<Gemm> {
       this->tensor_B.host_ref(), 
       Gemm::kTransformB,
       beta, 
+      this->tensor_C.host_ref(), 
       this->reference_D.host_ref(), 
       ElementAccumulator(0)
     );

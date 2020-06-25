@@ -1,7 +1,8 @@
 
 message(STATUS "Configuring cublas ...")
 
-if(DEFINED CUTLASS_ENABLE_CUBLAS AND NOT CUTLASS_ENABLE_CUBLAS)
+if((DEFINED CUTLASS_ENABLE_CUBLAS AND NOT CUTLASS_ENABLE_CUBLAS) OR
+   (DEFINED CUBLAS_ENABLED AND NOT CUBLAS_ENABLED))
   
   # Don't add cuBLAS if it's defined and false, assume it's not found.
 
@@ -9,28 +10,35 @@ if(DEFINED CUTLASS_ENABLE_CUBLAS AND NOT CUTLASS_ENABLE_CUBLAS)
   message(STATUS "cuBLAS Disabled.")
 
 elseif(NOT TARGET cublas)
-  
+ 
   find_path(
-    _CUBLAS_INCLUDE_DIR cublas.h
-    PATHS
-    ${CUDA_TOOLKIT_ROOT_DIR}/include
-    $ENV{CUBLAS_PATH}/include
-    $ENV{CUDA_PATH}/include
-    ${CUBLAS_PATH}/include
-    /usr/include)
+    _CUBLAS_INCLUDE_DIR
+    NAMES cublas.h
+    HINTS
+      ${CUBLAS_INCLUDE_PATH}
+      ENV CUBLAS_INCLUDE_PATH
+      ${CUBLAS_PATH}
+      ENV CUBLAS_PATH
+      ${CUDA_TOOLKIT_ROOT_DIR}
+    PATH_SUFFIXES
+      include
+    )
 
   find_library(
-    _CUBLAS_LIBRARY cublas
+    _CUBLAS_LIBRARY
+    NAMES cublas
     HINTS
-    ${CUDA_TOOLKIT_ROOT_DIR}/lib64
-    ${CUDA_TOOLKIT_ROOT_DIR}/lib/x64
-    $ENV{CUBLAS_PATH}/lib64
-    $ENV{CUBLAS_PATH}/lib/x64
-    $ENV{CUDA_PATH}/lib64
-    $ENV{CUDA_PATH}/lib/x64
-    ${CUBLAS_PATH}/lib64
-    ${CUBLAS_PATH}/lib/x64
-    /usr/lib/x86_64-linux-gnu)
+      ${CUBLAS_LIBRARY_PATH}
+      ENV CUBLAS_LIBRARY_PATH
+      ${_CUBLAS_INCLUDE_DIR}/..
+      ${CUBLAS_PATH}
+      ENV CUBLAS_PATH
+      ${CUDA_TOOLKIT_ROOT_DIR}
+    PATH_SUFFIXES
+      lib64
+      lib/x64
+      lib
+    )
 
   if(_CUBLAS_INCLUDE_DIR AND _CUBLAS_LIBRARY)
 
@@ -59,10 +67,12 @@ endif()
 if(CUTLASS_ENABLE_CUBLAS AND NOT TARGET cublas)
 
   if(WIN32)
-    add_library(cublas STATIC IMPORTED)
+    add_library(cublas STATIC IMPORTED GLOBAL)
   else()
-    add_library(cublas SHARED IMPORTED)
+    add_library(cublas SHARED IMPORTED GLOBAL)
   endif()
+
+  add_library(nvidia::cublas ALIAS cublas)
 
   set_property(
     TARGET cublas
@@ -76,35 +86,37 @@ if(CUTLASS_ENABLE_CUBLAS AND NOT TARGET cublas)
     $<BUILD_INTERFACE:${CUBLAS_INCLUDE_DIR}>)
 
   find_library(
-    _CUBLASLT_LIBRARY cublasLt
+    _CUBLASLT_LIBRARY
+    NAMES cublasLt
     HINTS
-    ${CUDA_TOOLKIT_ROOT_DIR}/lib64
-    ${CUDA_TOOLKIT_ROOT_DIR}/lib/x64
-    $ENV{CUBLAS_PATH}/lib64
-    $ENV{CUBLAS_PATH}/lib/x64
-    $ENV{CUDA_PATH}/lib64
-    $ENV{CUDA_PATH}/lib/x64
-    ${CUBLAS_PATH}/lib64
-    ${CUBLAS_PATH}/lib/x64
-    /usr/lib/x86_64-linux-gnu)
+      ${CUBLAS_LIBRARY_PATH}
+      ENV CUBLAS_LIBRARY_PATH
+      ${_CUBLAS_INCLUDE_DIR}/..
+      ${CUBLAS_PATH}
+      ENV CUBLAS_PATH
+      ${CUDA_TOOLKIT_ROOT_DIR}
+    PATH_SUFFIXES
+      lib64
+      lib/x64
+      lib
+    )
 
-  if(_CUBLASLT_LIBRARY)
+  if(_CUBLASLT_LIBRARY AND NOT TARGET cublasLt)
 
     if(WIN32)
-      add_library(cublasLt STATIC IMPORTED)
+      add_library(cublasLt STATIC IMPORTED GLOBAL)
     else()
-      add_library(cublasLt SHARED IMPORTED)
+      add_library(cublasLt SHARED IMPORTED GLOBAL)
     endif()
     
     set_property(
       TARGET cublasLt
       PROPERTY IMPORTED_LOCATION
       ${_CUBLASLT_LIBRARY})
-    
-    target_link_libraries(
-      cublas
-      INTERFACE
-      cublasLt)
+  
+    add_library(nvidia::cublasLt ALIAS cublasLt)
+
+    target_link_libraries(cublas INTERFACE cublasLt)
 
   endif()
 

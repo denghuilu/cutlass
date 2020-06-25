@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -29,14 +29,9 @@
 #include <iostream>
 #include <stdexcept>
 
-// CUTLASS Library includes
-#include "cutlass/library/library.h"
-#include "cutlass/library/manifest.h"
-
 // Profiler includes
 #include "cutlass_profiler.h"
 #include "gemm_operation_profiler.h"
-
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 namespace cutlass {
@@ -49,7 +44,8 @@ CutlassProfiler::CutlassProfiler(
 ): 
   options_(options) {
 
-  operation_profilers_.emplace_back(new GemmOperationProfiler); 
+  operation_profilers_.emplace_back(new GemmOperationProfiler(options));
+
 }
 
 CutlassProfiler::~CutlassProfiler() {
@@ -112,13 +108,6 @@ void CutlassProfiler::enumerate_() {
 /// Profiles all operations
 int CutlassProfiler::profile_() {
 
-  library::Manifest manifest;
-  Status status = manifest.initialize();
-
-  if (status != Status::kSuccess) {
-    return -1;
-  }
-
   int result = 0;
   DeviceContext device_context;
 
@@ -128,7 +117,7 @@ int CutlassProfiler::profile_() {
     if (options_.operation_kind == library::OperationKind::kInvalid ||
       options_.operation_kind == profiler->kind()) {
 
-      result = profiler->profile_all(options_, manifest, device_context);
+      result = profiler->profile_all(options_, library::Singleton::get().manifest, device_context);
 
       if (result) {
         return result;
@@ -165,7 +154,8 @@ void CutlassProfiler::print_usage_(std::ostream &out) {
   }
 
   out << "\n\nFor details about a particular function, specify the function name with --help.\n\nExample:\n\n"
-    << "  $ cutlass_profiler --operation=Gemm --help\n\n";
+    << "  $ cutlass_profiler --operation=Gemm --help\n\n"
+  ;
 }
 
 /// Prints usage

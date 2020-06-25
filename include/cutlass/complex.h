@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -25,11 +25,18 @@
 #pragma once
 
 #include <cuComplex.h>
+#if defined(__CUDACC_RTC__)
+#include <cuda/std/cstdint>
+#else
 #include <cstdint>
+#endif
 
 #include "cutlass/cutlass.h"
 #include "cutlass/half.h"
 #include "cutlass/real.h"
+
+#include "cutlass/bfloat16.h"
+#include "cutlass/tfloat32.h"
 
 #if !defined(__CUDACC_RTC__)
 #include <iosfwd>
@@ -352,9 +359,28 @@ CUTLASS_HOST_DEVICE R norm_accumulate(complex<T> const &z, R const &accumulator)
 }
 
 /// Returns the complex conjugate
+CUTLASS_HOST_DEVICE float conj(float const &z) {
+  return z;
+}
+
+/// Returns the complex conjugate
+CUTLASS_HOST_DEVICE double conj(double const &z) {
+  return z;
+}
+
+/// Returns the complex conjugate
 template <typename T>
 CUTLASS_HOST_DEVICE complex<T> conj(complex<T> const &z) {
   return complex<T>(real(z), -imag(z));
+}
+/// Indentity transform for non-complex types
+template <typename T>
+CUTLASS_HOST_DEVICE T conj(T const &z) {
+    static_assert( !std::is_same<T, cuComplex>::value &&
+                   !std::is_same<T, cuDoubleComplex>::value &&
+                   !std::is_same<T, cutlass::complex<double>>::value &&
+                   !std::is_same<T, cutlass::complex<float>>::value, "May not be a complex data type");
+  return z;
 }
 
 /// Projects the complex number z onto the Riemann sphere
@@ -414,6 +440,11 @@ CUTLASS_HOST_DEVICE complex<T> sin(complex<T> const &z) {
 template <typename T>
 struct RealType< complex<T> > {
   using Type = T;
+
+CUTLASS_HOST_DEVICE
+  static complex<T> from_real(double x) {
+    return complex<T>(static_cast<T>(x));
+  }
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -438,5 +469,18 @@ cutlass::complex<double> from_real<cutlass::complex<double> >(double r) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
+template <typename T>
+struct is_complex {
+  static bool const value = false;
+};
+
+template <typename T>
+struct is_complex<complex<T>> {
+  static bool const value = true;
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
 }  // namespace cutlass
 
+//////////////////////////////////////////////////////////////////////////////////////////////////

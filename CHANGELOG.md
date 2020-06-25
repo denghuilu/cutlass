@@ -1,6 +1,31 @@
 # NVIDIA CUTLASS Changelog
 
-# CUTLASS 2.0
+# CUTLASS 2.x
+
+## [2.2.0](https://github.com/NVIDIA/cutlass/releases/tag/v2.2.0) (2020-06-08)
+ * [NVIDIA Ampere Architecture features](https://devblogs.nvidia.com/nvidia-ampere-architecture-in-depth/)
+   * Fast Tensor Core operations: 
+    * Maximum performance via [`mma.sync`](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#warp-level-matrix-instructions-mma-and-friends)
+    * Tensor Float 32, BFloat16, and double-precision data types
+    * Mixed integer data types (int8, int4, bin1)
+   * Asynchronous copy for deep software pipelines via [`cp.async`](https://docs.nvidia.com/cuda/parallel-thread-execution)   
+   * Described in [GTC 2020 Webinar (SR 21745)](https://developer.nvidia.com/gtc/2020/video/s21745) (free registration required)
+ * Features:
+   * SDK examples showing GEMM fused with bias+relu and fused GEMM+GEMM
+   * Complex-valued GEMMs targeting NVIDIA Ampere Tensor Cores in double-precision and Tensor Float 32
+   * Gaussian complex GEMMs using 3m complex multiply algorithm
+   * Universal GEMM kernel supporting two batch modes and two algorithms for parallel reductions
+ * Policy updates:
+   * [CUDA 11 Toolkit](https://developer.nvidia.com/cuda-toolkit) needed to enable NVIDIA Ampere Architecture features
+   * Disabled F16C by default for compatibility - enable on cmake command line with `-DCUTLASS_ENABLE_F16C=ON`
+
+## [2.1.0](https://github.com/NVIDIA/cutlass/releases/tag/v2.1.0) (2020-04-06)
+ * BLAS-style host-side API added to [CUTLASS Library](/media/docs/quickstart.md#cutlass-library)
+    * API to launch compiled kernel instances for GEMM and planar complex GEMM
+ * Planar Complex GEMM kernels targeting Volta and Turing Tensor Cores
+    * Computes complex matrix products on matrices stored as disjoint real and imaginary parts
+    * [SDK Examples of Planar Complex GEMMs](/examples/10_planar_complex/planar_complex.cu)
+ * Minor enhancements and bug fixes
 
 ## [2.0.0](https://github.com/NVIDIA/cutlass/releases/tag/v2.0.0) (2019-11-19)
  * Substantially refactored for
@@ -22,7 +47,7 @@
     * Optimizations such as parallel reductions, threadblock rasterization, and intra-threadblock reductions
     * Batched GEMM operations
     * Complex-valued GEMMs
- * Note: a host compiler supporting C++11 or greater is required.
+ * **Note: a host compiler supporting C++11 or greater is required.**
 
 # CUTLASS 1.x
 
@@ -76,7 +101,7 @@
 
 ## Copyright
 
-Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
 
 ```
   Redistribution and use in source and binary forms, with or without modification, are permitted

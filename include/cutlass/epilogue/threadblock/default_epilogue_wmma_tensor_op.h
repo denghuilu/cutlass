@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -23,7 +23,7 @@
  *
  **************************************************************************************************/
 /*! \file
-  \brief Epilogue for threadblock scoped GEMMs using Tensor Ops.
+  \brief Epilogue for threadblock scoped GEMMs using WMMA.
 
   The epilogue rearranges the result of a matrix product through shared memory to match canonical
   tensor layouts in global memory. Epilogues support conversion and reduction operations.
@@ -39,6 +39,7 @@
 #include "cutlass/gemm/gemm.h"
 
 #include "cutlass/epilogue/thread/linear_combination.h"
+#include "cutlass/epilogue/thread/linear_combination_clamp.h"
 #include "cutlass/epilogue/thread/conversion_op.h"
 #include "cutlass/epilogue/thread/reduction_op.h"
 

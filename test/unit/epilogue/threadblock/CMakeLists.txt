@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification, are permitted
 # provided that the following conditions are met:
@@ -30,4 +30,5 @@ cutlass_test_unit_add_executable(
   epilogue_tensor_op.cu
   epilogue_volta_tensor_op.cu
   epilogue_wmma_tensor_op_sm70.cu
-  )
+  epilogue_planar_complex.cu
+)
